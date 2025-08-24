@@ -1,3 +1,4 @@
+import re
 import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import filedialog, simpledialog, Text, Scrollbar, Label, Frame
@@ -8,7 +9,7 @@ from ttkbootstrap.constants import *
 import subprocess
 import sys, os
 import shutil
-import glob
+#import glob
 import yaml
 from pathlib import Path
 
@@ -141,7 +142,7 @@ class HenryTextEditor:
         #######################################################################################
 
         # Create a Text widget for the main editing area
-        self.text_area = ttk.Text(self.root, font=self.editor_font, undo=True)
+        self.text_area = ttk.Text(self.root, font=self.editor_font, wrap='word', undo=True)
         self.text_area.pack(fill=tk.BOTH, expand=1)
 
         # Create a Scrollbar and attach it to the Text widget
@@ -527,23 +528,44 @@ def build_jekyll_site(jekyll_path="jekyll", site_dir="my_jekyll_site", destinati
 
 def find_jekyll_path():
     """Check PATH to find Jekyll install."""
+    # check if ruby path exists
+    gem_path = ""
+    gem_root = Path(os.path.expanduser('~') + "/.gem/ruby")
+    if not gem_root.is_dir():
+        # gem dir does not exist
+        gem_path = ""
+    else:
+        version_pattern = re.compile(r"^\d+\.\d+\.\d+$")
+        for entry in gem_root.iterdir():
+            if entry.is_dir() and version_pattern.match(entry.name):
+                gem_path = str(gem_root) + "/" + entry.name + "/bin"
+                break
+
+        #raise FileNotFoundError("No Ruby‑version directory found in ~/.gem/ruby")
+
     system_path = os.pathsep.join([p for p in os.environ['PATH'].split(os.pathsep)])
     user_path = os.path.expanduser('~') + "/bin"
-    clean_path = user_path + ":" + system_path
-    jekyll_path = shutil.which('jekyll', path=clean_path)
+    search_path = user_path + ":" + gem_path + ":" + system_path
+    jekyll_path = shutil.which('jekyll', path=search_path)
+
+    print("System:::" + str(system_path))
+    print("User  :::" + str(user_path))
+    print("Gem   :::" + str(gem_path))
+    print("Search:::" + str(search_path))
+    print("FOUND :::" + str(jekyll_path))
 
     return jekyll_path
 
 
 def create_directory(directory_path):
-  """Checks if a directory exists and creates it if it doesn't."""
-  try:
-    if not os.path.exists(directory_path):
-      os.makedirs(directory_path)  # Create the directory and any parent directories
-      print(f"Directory '{directory_path}' created successfully.")
-    else:
-      print(f"Directory '{directory_path}' already exists.")
-  except Exception as e:
-    print(f"An error occurred: {e}")
-
-
+    """Checks if a directory exists and creates it if it doesn't."""
+    try:
+        if not os.path.exists(directory_path):
+            os.makedirs(directory_path)  # Create the directory and any parent directories
+            print(f"Directory '{directory_path}' created successfully.")
+            return False
+        else:
+            print(f"Directory '{directory_path}' already exists.")
+            return True
+    except Exception as e:
+        print(f"An error occurred: {e}")

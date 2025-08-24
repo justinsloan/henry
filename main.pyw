@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-__version__ = "Dev.1"
+__version__ = "0"
 __author__ = "Justin Sloan"
 
 from class_HenryTextEditor import *
