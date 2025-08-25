@@ -1,17 +1,13 @@
-import re
+import yaml
 import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import filedialog, simpledialog, Text, Scrollbar, Label, Frame
 import ttkbootstrap as ttk
 from ttkbootstrap.dialogs import Messagebox
-from ttkbootstrap.constants import *
-
-import subprocess
-import sys, os
-import shutil
+#from ttkbootstrap.constants import *
 #import glob
-import yaml
-from pathlib import Path
+
+from editor_functions import *
 
 
 class HenryTextEditor:
@@ -180,10 +176,14 @@ class HenryTextEditor:
         self.info_pane_title = ttk.Entry(self.info_pane, width=30)
         self.info_pane_title.pack(padx=5, pady=(0,5), fill='x')
 
+        # _config.yml button
+        btn = ttk.Button(self.info_pane, text="_config.yml", command=self.open_file, bootstyle="light")
+        btn.pack(pady=(0, 5))
+
         # Close button
-        self.info_pane_close_btn = ttk.Button(self.info_pane, text="Close",
-                                    command=self._close_info_pane)
-        self.info_pane_close_btn.pack(pady=(0, 5))
+        self.info_pane_close_btn = ttk.Button(self.info_pane, text="Close", command=self._close_info_pane)
+        self.info_pane_close_btn.pack(anchor='w', pady=(0, 5))
+
         self.info_pane.lower()  # hide initially
         # -----------------------------------
 
@@ -436,136 +436,3 @@ categories: blog
                 return response
             elif response == "Cancel" or None:
                 return "Cancel"
-
-def count_words_outside_header(text=""):
-    """Return a word count that does not include words that are in the Jekyll headers."""
-    lines = text.split('\n')
-    in_header = False
-    word_count = 0
-
-    for line in lines:
-        stripped_line = line.strip()
-        if stripped_line == "---":
-            in_header = not in_header
-            continue
-        if not in_header and stripped_line:
-            words = stripped_line.split()
-            word_count += len(words)
-
-    return word_count
-
-
-def get_jekyll_version(jekyll_path="jekyll"):
-    """
-    Get the Jekyll version from `jekyll --version`.
-    """
-    cmd = [
-        jekyll_path,
-        "--version"
-    ]
-
-    try:
-        result = subprocess.run(
-            cmd,
-            text=True,
-            capture_output=True,
-            check=False,
-        )
-    except FileNotFoundError as exc:
-        raise RuntimeError("`jekyll` command not found – make sure Ruby & the Jekyll gem are installed.") from exc
-
-    return result.returncode, result.stdout, result.stderr
-
-
-def new_jekyll_site(jekyll_path="jekyll", dir_name="my_jekyll_site", cwd=None):
-    """
-    Execute `jekyll new <dir_name>`.
-    """
-    cmd = [jekyll_path, "new", dir_name]
-    print(f"Running: {' '.join(cmd)}")
-    try:
-        result = subprocess.run(
-            cmd,
-            cwd=cwd,
-            text=True,
-            capture_output=True,
-            check=False,          # we will inspect `returncode`
-        )
-    except FileNotFoundError as e:
-        raise RuntimeError(
-            "`jekyll` command not found. "
-            "Make sure Ruby and Jekyll are installed."
-        ) from e
-
-    return result.returncode, result.stdout, result.stderr
-
-
-def build_jekyll_site(jekyll_path="jekyll", site_dir="my_jekyll_site", destination_dir=""):
-    """
-    Build the Jekyll site in `destination_dir`.
-    """
-    if not destination_dir:
-        destination_dir = site_dir
-
-    cmd = [
-        jekyll_path,
-        "build",
-        "--source",
-        str(site_dir),
-        "--destination",
-        str(destination_dir + "/_site"),
-    ]
-
-    result = subprocess.run(
-        cmd,
-        cwd=site_dir,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    return result.returncode, result.stdout, result.stderr
-
-
-def find_jekyll_path():
-    """Check PATH to find Jekyll install."""
-    # check if ruby path exists
-    gem_path = ""
-    gem_root = Path(os.path.expanduser('~') + "/.gem/ruby")
-    if not gem_root.is_dir():
-        # gem dir does not exist
-        gem_path = ""
-    else:
-        version_pattern = re.compile(r"^\d+\.\d+\.\d+$")
-        for entry in gem_root.iterdir():
-            if entry.is_dir() and version_pattern.match(entry.name):
-                gem_path = str(gem_root) + "/" + entry.name + "/bin"
-                break
-
-        #raise FileNotFoundError("No Ruby‑version directory found in ~/.gem/ruby")
-
-    system_path = os.pathsep.join([p for p in os.environ['PATH'].split(os.pathsep)])
-    user_path = os.path.expanduser('~') + "/bin"
-    search_path = user_path + ":" + gem_path + ":" + system_path
-    jekyll_path = shutil.which('jekyll', path=search_path)
-
-    print("System:::" + str(system_path))
-    print("User  :::" + str(user_path))
-    print("Gem   :::" + str(gem_path))
-    print("Search:::" + str(search_path))
-    print("FOUND :::" + str(jekyll_path))
-
-    return jekyll_path
-
-
-def create_directory(directory_path):
-    """Checks if a directory exists and creates it if it doesn't."""
-    try:
-        if not os.path.exists(directory_path):
-            os.makedirs(directory_path)  # Create the directory and any parent directories
-            print(f"Directory '{directory_path}' created successfully.")
-            return False
-        else:
-            print(f"Directory '{directory_path}' already exists.")
-            return True
-    except Exception as e:
-        print(f"An error occurred: {e}")
