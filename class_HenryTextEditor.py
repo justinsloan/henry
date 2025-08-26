@@ -33,7 +33,7 @@ class HenryTextEditor:
         self.root.bind_all('<Control-s>', self.save_file)
         # self.root.bind_all("<Control-Shift-S>", saveas_com)
         # self.root.bind_all('<Control-w>', close_com)
-        self.root.bind_all('<Control-q>', self.exit_editor)
+        self.root.bind_all('<Control-q>', self._on_close)
         # self.root.bind_all('<Control-d>', default_view)
         # self.root.bind_all('<F11>', full_screen)
         # self.root.bind("<Escape>", lambda event: root.attributes("-zoomed", False))
@@ -128,7 +128,7 @@ class HenryTextEditor:
         self.main_menu.add_command(label="⚙️ Settings...", command=self.show_about_dialog, state="disabled")
         self.main_menu.add_command(label="🪪 Project Properties", command=self.show_info_pane)
         self.main_menu.add_separator()
-        self.main_menu.add_command(label="Exit", command=self.exit_editor)
+        self.main_menu.add_command(label="Exit", command=self._on_close)
         # --------------- Main Menu ---------------
 
         # --------------- Project Info Button ---------------
@@ -188,10 +188,10 @@ class HenryTextEditor:
         # -----------------------------------
 
         # Bind the Text widget to update the status bar
-        self.text_area.bind('<KeyRelease>', self.update_status_bar)
+        self.text_area.bind('<KeyRelease>', self._update_status_bar)
 
         # Track changes to the text area
-        self.text_area.bind('<KeyPress>', self.on_text_change)
+        self.text_area.bind('<KeyPress>', self._on_text_change)
 
         # Verify Jekyll install
         self.jekyll_path = find_jekyll_path()
@@ -206,6 +206,9 @@ class HenryTextEditor:
         if code == 0:
             jekyll_version = out.split()[1]
             self.update_statusline(self.jekyll_path + " " + jekyll_version)
+
+        # Handle closing/exiting
+        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
     def _close_info_pane(self):
         """Save project config and hide the info pane."""
@@ -276,7 +279,7 @@ categories: blog
                 self.text_area.delete(1.0, tk.END)
                 self.text_area.insert(tk.END, content)
                 self.root.title(f"Henry - {file_path}")
-                self.update_status_bar()
+                self._update_status_bar()
                 self.modified = False
 
     def save_file(self):
@@ -292,7 +295,7 @@ categories: blog
                 self.root.title(f"Henry - {file_path}")
                 self.modified = False
 
-    def exit_editor(self):
+    def _on_close(self):
         """Exit the editor."""
         save = self.check_save_before_close()
         if not save == "Cancel":
@@ -371,8 +374,8 @@ categories: blog
             self.text_area.edit_undo()
         except tk.TclError:
             pass
-        self.update_status_bar()
-        self.on_text_change()
+        self._update_status_bar()
+        self._on_text_change()
 
     def redo_action(self):
         """Redo the last undone action."""
@@ -380,14 +383,14 @@ categories: blog
             self.text_area.edit_redo()
         except tk.TclError:
             pass
-        self.update_status_bar()
-        self.on_text_change()
+        self._update_status_bar()
+        self._on_text_change()
 
     def cut_text(self):
         """Cut selected text."""
         self.text_area.event_generate('<<Cut>>')
-        self.update_status_bar()
-        self.on_text_change()
+        self._update_status_bar()
+        self._on_text_change()
 
     def copy_text(self):
         """Copy selected text."""
@@ -396,8 +399,8 @@ categories: blog
     def paste_text(self):
         """Paste text from clipboard."""
         self.text_area.event_generate('<<Paste>>')
-        self.update_status_bar()
-        self.on_text_change()
+        self._update_status_bar()
+        self._on_text_change()
 
     def select_all(self, event=None):
         self.text_area.tag_add('sel', '1.0', 'end-1c')
@@ -410,7 +413,7 @@ categories: blog
         """Show the about dialog."""
         Messagebox.show_info("Henry\n\nA simple editor for Jekyll.", title="About Henry")
 
-    def update_status_bar(self, event=None):
+    def _update_status_bar(self, event=None):
         """Update the status bar with the current word count."""
         content = self.text_area.get(1.0, tk.END)
         word_count = count_words_outside_header(content)
@@ -419,7 +422,7 @@ categories: blog
     def update_statusline(self, text):
         self.status_bar_left.config(text=" " + text)
 
-    def on_text_change(self, event=None):
+    def _on_text_change(self, event=None):
         """Track changes to the text area."""
         self.modified = True
         current_title = self.root.title().replace("• ", "")
