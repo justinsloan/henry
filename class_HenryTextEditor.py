@@ -27,10 +27,10 @@ class HenryTextEditor:
         self.editor_font = tkfont.Font(family="Courier", size=12)
 
         # Key Bindings
-        self.root.bind_all('<Control-a>', self.select_all)
-        self.root.bind_all('<Control-n>', self.new_file)
-        self.root.bind_all('<Control-o>', self.open_file)
-        self.root.bind_all('<Control-s>', self.save_file)
+        self.root.bind_all('<Control-a>', self._select_all)
+        self.root.bind_all('<Control-n>', self._new_file)
+        self.root.bind_all('<Control-o>', self._open_file)
+        self.root.bind_all('<Control-s>', self._save_file)
         # self.root.bind_all("<Control-Shift-S>", saveas_com)
         # self.root.bind_all('<Control-w>', close_com)
         self.root.bind_all('<Control-q>', self._on_close)
@@ -64,13 +64,13 @@ class HenryTextEditor:
         self.project_menubutton.config(menu=self.project_menu)
 
         self.project_menu.add_command(label="Open Project...", command=self._select_project)
-        self.project_menu.add_command(label="New Project...", command=self.new_project)
+        self.project_menu.add_command(label="New Project...", command=self._new_project)
         self.project_menu.add_separator()
         self.project_menu.add_command(label="Publish...", command=self._publish_project, state="disabled")
         # --------------- Open Menu ---------------
 
         # --------------- New Post Button ---------------
-        self.new_post_button = ttk.Button(self.button_bar, text="➕", command=self.new_file, bootstyle="link")
+        self.new_post_button = ttk.Button(self.button_bar, text="➕", command=self._new_file, bootstyle="link")
         self.new_post_button.pack(side=tk.LEFT)
         # --------------- New Post Button ---------------
 
@@ -84,55 +84,55 @@ class HenryTextEditor:
         ## File Submenu
         self.file_submenu = ttk.Menu(self.main_menu, tearoff=0)
         self.main_menu.add_cascade(label="File", menu=self.file_submenu)
-        self.file_submenu.add_command(label="New Project...", command=self.new_file, state="disabled")
-        self.file_submenu.add_command(label="📂 Open Project...", command=self.new_file, state="disabled")
+        self.file_submenu.add_command(label="New Project...", command=self._new_file, state="disabled")
+        self.file_submenu.add_command(label="📂 Open Project...", command=self._new_file, state="disabled")
         self.file_submenu.add_separator()
-        self.file_submenu.add_command(label="➕ New Post", command=self.new_file)
-        self.file_submenu.add_command(label="Open...", command=self.open_file)
-        self.file_submenu.add_command(label="💾 Save", command=self.save_file)
-        self.file_submenu.add_command(label="Save as...", command=self.save_file, state="disabled")
+        self.file_submenu.add_command(label="➕ New Post", command=self._new_file)
+        self.file_submenu.add_command(label="Open...", command=self._open_file)
+        self.file_submenu.add_command(label="💾 Save", command=self._save_file)
+        self.file_submenu.add_command(label="Save as...", command=self._save_file, state="disabled")
 
         ## Edit Submenu
         self.edit_submenu = ttk.Menu(self.main_menu, tearoff=0)
         self.main_menu.add_cascade(label="Edit", menu=self.edit_submenu)
-        self.edit_submenu.add_command(label="Undo", command=self.undo_action)
-        self.edit_submenu.add_command(label="Redo", command=self.redo_action)
+        self.edit_submenu.add_command(label="Undo", command=self._undo_action)
+        self.edit_submenu.add_command(label="Redo", command=self._redo_action)
         self.edit_submenu.add_separator()
-        self.edit_submenu.add_command(label="✂️ Cut", command=self.cut_text)
-        self.edit_submenu.add_command(label="Copy", command=self.copy_text)
-        self.edit_submenu.add_command(label="Paste", command=self.paste_text)
+        self.edit_submenu.add_command(label="✂️ Cut", command=self._cut_text)
+        self.edit_submenu.add_command(label="Copy", command=self._copy_text)
+        self.edit_submenu.add_command(label="Paste", command=self._paste_text)
         self.edit_submenu.add_separator()
-        self.edit_submenu.add_command(label="Select All", command=self.select_all)
+        self.edit_submenu.add_command(label="Select All", command=self._select_all)
 
         ## Insert Submenu
         self.insert_submenu = ttk.Menu(self.main_menu, tearoff=0)
         self.main_menu.add_cascade(label="Insert", menu=self.insert_submenu)
-        self.insert_submenu.add_command(label="Date/Time", command=self.new_file, state="disabled")
-        self.insert_submenu.add_command(label="Image...", command=self.new_file, state="disabled")
-        self.insert_submenu.add_command(label="Table...", command=self.new_file, state="disabled")
-        self.insert_submenu.add_command(label="Link", command=self.new_file, state="disabled")
+        self.insert_submenu.add_command(label="Date/Time", command=self._new_file, state="disabled")
+        self.insert_submenu.add_command(label="Image...", command=self._new_file, state="disabled")
+        self.insert_submenu.add_command(label="Table...", command=self._new_file, state="disabled")
+        self.insert_submenu.add_command(label="Link", command=self._new_file, state="disabled")
 
         ## Help Submenu
         self.help_submenu = ttk.Menu(self.main_menu, tearoff=0)
         self.main_menu.add_cascade(label="Help", menu=self.help_submenu)
-        self.help_submenu.add_command(label="Getting Started", command=self.show_about_dialog, state="disabled")
+        self.help_submenu.add_command(label="Getting Started", command=self._show_about_dialog, state="disabled")
         self.help_submenu.add_separator()
-        self.help_submenu.add_command(label="Submit a Bug report...", command=self.show_about_dialog, state="disabled")
-        self.help_submenu.add_command(label="Submit Feedback...", command=self.show_about_dialog, state="disabled")
-        self.help_submenu.add_command(label="🛟 Contact Support", command=self.show_about_dialog, state="disabled")
+        self.help_submenu.add_command(label="Submit a Bug report...", command=self._show_about_dialog, state="disabled")
+        self.help_submenu.add_command(label="Submit Feedback...", command=self._show_about_dialog, state="disabled")
+        self.help_submenu.add_command(label="🛟 Contact Support", command=self._show_about_dialog, state="disabled")
         self.help_submenu.add_separator()
-        self.help_submenu.add_command(label="About...", command=self.show_about_dialog)
+        self.help_submenu.add_command(label="About...", command=self._show_about_dialog)
 
         ## Settings
         self.main_menu.add_separator()
-        self.main_menu.add_command(label="⚙️ Settings...", command=self.show_about_dialog, state="disabled")
-        self.main_menu.add_command(label="🪪 Project Properties", command=self.show_info_pane)
+        self.main_menu.add_command(label="⚙️ Settings...", command=self._show_about_dialog, state="disabled")
+        self.main_menu.add_command(label="🪪 Project Properties", command=self._show_info_pane)
         self.main_menu.add_separator()
         self.main_menu.add_command(label="Exit", command=self._on_close)
         # --------------- Main Menu ---------------
 
         # --------------- Project Info Button ---------------
-        self.info_button = ttk.Button(self.button_bar, text="🪪", command=self.show_info_pane, bootstyle="link")
+        self.info_button = ttk.Button(self.button_bar, text="🪪", command=self._show_info_pane, bootstyle="link")
         self.info_button.pack(side=tk.RIGHT)
         # --------------- Project Info Button ---------------
         #######################################################################################
@@ -177,7 +177,7 @@ class HenryTextEditor:
         self.info_pane_title.pack(padx=5, pady=(0,5), fill='x')
 
         # _config.yml button
-        btn = ttk.Button(self.info_pane, text="_config.yml", command=self.open_file, bootstyle="light")
+        btn = ttk.Button(self.info_pane, text="_config.yml", command=self._open_file, bootstyle="light")
         btn.pack(pady=(0, 5))
 
         # Close button
@@ -193,19 +193,27 @@ class HenryTextEditor:
         # Track changes to the text area
         self.text_area.bind('<KeyPress>', self._on_text_change)
 
+        # Get system/service paths
+        self.system_path, self.gem_path, self.jekyll_path = get_app_paths()
+
         # Verify Jekyll install
-        self.jekyll_path = find_jekyll_path()
         if not self.jekyll_path:
             response = Messagebox.yesno("An installation of Jekyll was not found on your system. Would you like to install Jekyll now?", title="Install Jekyll")
             if response == "Yes":
-                self.update_statusline("Please install Jekyll...")
+                self._update_statusline("Please install Jekyll...")
             elif response == "No" or None:
                 exit()
 
         code, out, err = get_jekyll_version(self.jekyll_path)
         if code == 0:
             jekyll_version = out.split()[1]
-            self.update_statusline(self.jekyll_path + " " + jekyll_version)
+            self._update_statusline(self.jekyll_path + " " + jekyll_version)
+
+        # Verify Gem install
+        if not self.gem_path:
+            response = Messagebox.ok("An installation of Gem was not found on your system. You can edit your sites, but you will not be able to use the built-in Publish feature.",
+                title="Gem Not Found")
+            # disable Publish... menu item
 
         # Handle closing/exiting
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -217,7 +225,7 @@ class HenryTextEditor:
         self.config['title'] = self.info_pane_title.get()
         self.root.title(f"Henry - {self.config['title']}")
 
-        self.save_project_config()  # write _config.yml
+        self._save_project_config()  # write _config.yml
 
     def _increase_font_size(self, event=None):
         """Increment the editor font size by 1 point."""
@@ -231,17 +239,17 @@ class HenryTextEditor:
         new_size = current_size - 1
         self.editor_font.config(size=new_size)
 
-    def show_overlay(self, text="Hello World!"):
+    def _show_overlay(self, text="Hello World!"):
         """Display the overlay with the provided text."""
         self.overlay_label.config(text=text)
         self.overlay.lift()  # bring to front
         # hide after a short delay (optional)
         self.root.after(6000, self.overlay.lower)
 
-    def show_info_pane(self):
+    def _show_info_pane(self):
         """Display the overlay with the current file name."""
         if not self.is_project_open:
-            self.show_overlay("No project is open.")
+            self._show_overlay("No project is open.")
             return
 
         # Pre‑populate entry with the window title
@@ -249,7 +257,7 @@ class HenryTextEditor:
         self.info_pane_title.insert(0, self.config['title'])
         self.info_pane.lift()  # bring to front
 
-    def new_file(self):
+    def _new_file(self):
         """Create a new file."""
         header = """---
 layout: post
@@ -259,16 +267,16 @@ categories: blog
 ---  
 
 """
-        self.check_save_before_close()
+        self._check_save_before_close()
         self.text_area.delete(1.0, tk.END)
         self.text_area.insert(tk.END, header)
 
         self.root.title("Henry - New File")
         self.modified = False
 
-    def open_file(self):
+    def _open_file(self):
         """Open an existing file."""
-        self.check_save_before_close()
+        self._check_save_before_close()
         file_path = filedialog.askopenfilename(defaultextension=".md",
                                                filetypes=[("Markdown", "*.md"),
                                                           ("Text Files", "*.txt"),
@@ -282,7 +290,7 @@ categories: blog
                 self._update_status_bar()
                 self.modified = False
 
-    def save_file(self):
+    def _save_file(self):
         """Save the current file."""
         file_path = filedialog.asksaveasfilename(defaultextension=".md",
                                                  filetypes=[("Markdown", "*.md"),
@@ -297,16 +305,16 @@ categories: blog
 
     def _on_close(self):
         """Exit the editor."""
-        save = self.check_save_before_close()
+        save = self._check_save_before_close()
         if not save == "Cancel":
             self.root.quit()
 
-    def save_project_config(self):
+    def _save_project_config(self):
         """Save the current project configuration back to _config.yml."""
         with open(self.config_path, "w", encoding="utf-8") as f:
             yaml.safe_dump(self.config, f, sort_keys=False, default_flow_style=False)
 
-    def new_project(self):
+    def _new_project(self):
         """Create a new Jekyll site."""
         # get the site name from the user
         site_name = simpledialog.askstring(
@@ -315,9 +323,9 @@ categories: blog
             parent=self.root
         )
         if site_name:
-            self.update_statusline(f"Creating {site_name}...")
+            self._update_statusline(f"Creating {site_name}...")
         else:
-            self.update_statusline("Canceled create new project.")
+            self._update_statusline("Canceled create new project.")
 
         # get the folder location from the user
         folder = filedialog.askdirectory()
@@ -327,35 +335,38 @@ categories: blog
         code, out, err = new_jekyll_site(self.jekyll_path, site_name, folder)
 
         if code == 0:
-            self.show_overlay(f"{site_name} created.")
+            self._show_overlay(f"{site_name} created.")
         else:
-            self.show_overlay("ERROR!!! Creating project.")
+            self._show_overlay("ERROR!!! Creating project.")
 
-        self.open_project(f"{folder}/{site_name}")
+        self._open_project(f"{folder}/{site_name}")
 
     def _select_project(self):
         project_path = filedialog.askdirectory()
-        self.open_project(f"{project_path}/")
+        self._open_project(f"{project_path}/")
 
-    def open_project(self, project_path):
+    def _open_project(self, project_path):
         """Open an existing Jekyll site."""
         self.config_path = os.path.join(project_path, "_config.yml")
         if not os.path.isfile(self.config_path):
-            self.update_statusline("_config.yml not found in the selected folder.  " + project_path)
+            self._update_statusline("_config.yml not found in the selected folder.  " + project_path)
             return
 
         with open(self.config_path, "r", encoding="utf-8") as f:
             try:
                 self.config = yaml.safe_load(f)
             except yaml.YAMLError as exc:
-                self.update_statusline(f"Error parsing config.yml: {exc}")
+                self._update_statusline(f"Error parsing config.yml: {exc}")
                 return
 
         self.root.title(f"Henry - {self.config['title']}")
 
-        self.update_statusline(project_path)
+        self._update_statusline(project_path)
         self.project_path = project_path
-        self.project_menu.entryconfig('Publish...', state='normal')
+
+        if self.gem_path(): # Enable Publish... menu item if Gem is installed
+            self.project_menu.entryconfig('Publish...', state='normal')
+
         self.is_project_open = True
 
     def _publish_project(self):
@@ -363,12 +374,12 @@ categories: blog
         code, out, err = build_jekyll_site(self.jekyll_path, self.project_path, destination)
 
         if code == 0:
-            self.show_overlay("✅ Site build completed successfully.")
+            self._show_overlay("✅ Site build completed successfully.")
         else:
-            self.show_overlay("ERROR!!! Build failed.")
+            self._show_overlay("ERROR!!! Build failed.")
             print(err)
 
-    def undo_action(self):
+    def _undo_action(self):
         """Undo the last action."""
         try:
             self.text_area.edit_undo()
@@ -377,7 +388,7 @@ categories: blog
         self._update_status_bar()
         self._on_text_change()
 
-    def redo_action(self):
+    def _redo_action(self):
         """Redo the last undone action."""
         try:
             self.text_area.edit_redo()
@@ -386,30 +397,30 @@ categories: blog
         self._update_status_bar()
         self._on_text_change()
 
-    def cut_text(self):
+    def _cut_text(self):
         """Cut selected text."""
         self.text_area.event_generate('<<Cut>>')
         self._update_status_bar()
         self._on_text_change()
 
-    def copy_text(self):
+    def _copy_text(self):
         """Copy selected text."""
         self.text_area.event_generate('<<Copy>>')
 
-    def paste_text(self):
+    def _paste_text(self):
         """Paste text from clipboard."""
         self.text_area.event_generate('<<Paste>>')
         self._update_status_bar()
         self._on_text_change()
 
-    def select_all(self, event=None):
+    def _select_all(self, event=None):
         self.text_area.tag_add('sel', '1.0', 'end-1c')
         self.text_area.mark_set('insert', '1.0')
         self.text_area.see('insert')
         return 'break'
 
     @staticmethod
-    def show_about_dialog():
+    def _show_about_dialog():
         """Show the about dialog."""
         Messagebox.show_info("Henry\n\nA simple editor for Jekyll.", title="About Henry")
 
@@ -419,7 +430,7 @@ categories: blog
         word_count = count_words_outside_header(content)
         self.status_bar_right.config(text=f"Words: {word_count} ")
 
-    def update_statusline(self, text):
+    def _update_statusline(self, text):
         self.status_bar_left.config(text=" " + text)
 
     def _on_text_change(self, event=None):
@@ -428,12 +439,12 @@ categories: blog
         current_title = self.root.title().replace("• ", "")
         self.root.title(f"• {current_title}")
 
-    def check_save_before_close(self, event=None):
+    def _check_save_before_close(self, event=None):
         """Check for unsaved changes."""
         if self.modified:
             response = Messagebox.yesnocancel("Do you want to save your changes?", title="Unsaved Changes")
             if response == "Yes":
-                self.save_file()
+                self._save_file()
                 return response
             elif response == "No":
                 return response

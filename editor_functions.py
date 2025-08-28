@@ -93,7 +93,7 @@ def build_jekyll_site(jekyll_path="jekyll", site_dir="my_jekyll_site", destinati
     return result.returncode, result.stdout, result.stderr
 
 
-def find_jekyll_path():
+def get_app_paths():
     """Check PATH to find Jekyll install."""
     # check if ruby path exists
     gem_path = ""
@@ -121,7 +121,7 @@ def find_jekyll_path():
     print("Search:::" + str(search_path))
     print("FOUND :::" + str(jekyll_path))
 
-    return jekyll_path
+    return search_path, gem_path, jekyll_path
 
 
 def create_directory(directory_path):
