@@ -20,9 +20,11 @@ class HenryTextEditor:
         self.config = []             # dict for _config.yml
         self.config_path = ""        # location of _config.yml
         self.project_path = ""       # dir for project
+        self.current_spin = ""
 
         self.modified = False        # is the text area modified?
         self.is_project_open = False # is a project open?
+        self._show_statusline_spinner = False
 
         # Define the editor font
         self.editor_font = tkfont.Font(family="Courier", size=12)
@@ -391,6 +393,7 @@ categories: blog
             daemon=True
         )
         project_build_thread.start()
+        self._run_statusline_spinner()
 
     def _run_project_build(self, destination):
         code, out, err = build_jekyll_site(self.jekyll_path, self.project_path, destination)
@@ -414,7 +417,7 @@ categories: blog
 
         self.current_spin += "."
         self._update_statusline(self.current_spin)
-        self.root.after(1000, self._run_statusline_spinner()) # schedule next tick
+        self.root.after(1000, self._run_statusline_spinner) # schedule next tick
 
     def _undo_action(self):
         """Undo the last action."""
