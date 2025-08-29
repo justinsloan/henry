@@ -4,6 +4,7 @@ import tkinter.font as tkfont
 from tkinter import filedialog, simpledialog, Text, Scrollbar, Label, Frame
 import ttkbootstrap as ttk
 from ttkbootstrap.dialogs import Messagebox
+import threading
 #from ttkbootstrap.constants import *
 #import glob
 
@@ -63,16 +64,16 @@ class HenryTextEditor:
         self.button_bar.pack(side=tk.TOP, fill=tk.X)
 
         # --------------- Open Menu ---------------
-        self.project_menubutton = ttk.Menubutton(self.button_bar, text="Project", bootstyle="light")
+        self.project_menubutton = ttk.Menubutton(self.button_bar, text="🗃️ Project", bootstyle="light")
         self.project_menubutton.pack(side=tk.LEFT)
 
         self.project_menu = ttk.Menu(self.project_menubutton, tearoff=0)
         self.project_menubutton.config(menu=self.project_menu)
 
-        self.project_menu.add_command(label="Open Project...", command=self._select_project)
-        self.project_menu.add_command(label="New Project...", command=self._new_project)
+        self.project_menu.add_command(label="📂 Open Project...", command=self._select_project)
+        self.project_menu.add_command(label="🗂️ New Project...", command=self._new_project)
         self.project_menu.add_separator()
-        self.project_menu.add_command(label="Publish...", command=self._publish_project, state="disabled")
+        self.project_menu.add_command(label="📡 Publish...", command=self._publish_project, state="disabled")
         # --------------- Open Menu ---------------
 
         # --------------- New Post Button ---------------
@@ -81,7 +82,7 @@ class HenryTextEditor:
         # --------------- New Post Button ---------------
 
         # --------------- Main Menu ---------------
-        self.main_menubutton = ttk.Menubutton(self.button_bar, text="===")
+        self.main_menubutton = ttk.Menubutton(self.button_bar, text="Ⓜ️ Menu")
         self.main_menubutton.pack(side=tk.RIGHT)
 
         self.main_menu = ttk.Menu(self.main_menubutton, tearoff=0)
@@ -90,11 +91,11 @@ class HenryTextEditor:
         ## File Submenu
         self.file_submenu = ttk.Menu(self.main_menu, tearoff=0)
         self.main_menu.add_cascade(label="File", menu=self.file_submenu)
-        self.file_submenu.add_command(label="New Project...", command=self._new_file, state="disabled")
-        self.file_submenu.add_command(label="📂 Open Project...", command=self._new_file, state="disabled")
-        self.file_submenu.add_separator()
+        #self.file_submenu.add_command(label="New Project...", command=self._new_file, state="disabled")
+        #self.file_submenu.add_command(label="📂 Open Project...", command=self._new_file, state="disabled")
+        #self.file_submenu.add_separator()
         self.file_submenu.add_command(label="➕ New Post", command=self._new_file)
-        self.file_submenu.add_command(label="Open...", command=self._open_file)
+        self.file_submenu.add_command(label="📄 Open...", command=self._open_file)
         self.file_submenu.add_command(label="💾 Save", command=self._save_file)
         self.file_submenu.add_command(label="Save as...", command=self._save_file, state="disabled")
 
@@ -105,7 +106,7 @@ class HenryTextEditor:
         self.edit_submenu.add_command(label="Redo", command=self._redo_action)
         self.edit_submenu.add_separator()
         self.edit_submenu.add_command(label="✂️ Cut", command=self._cut_text)
-        self.edit_submenu.add_command(label="Copy", command=self._copy_text)
+        self.edit_submenu.add_command(label="📋 Copy", command=self._copy_text)
         self.edit_submenu.add_command(label="Paste", command=self._paste_text)
         self.edit_submenu.add_separator()
         self.edit_submenu.add_command(label="Select All", command=self._select_all)
@@ -200,7 +201,7 @@ class HenryTextEditor:
         self.text_area.bind('<KeyPress>', self._on_text_change)
 
         # Get system/service paths
-        self.system_path, self.gem_path, self.jekyll_path = get_app_paths()
+        self.system_path, self.ruby_path, self.jekyll_path = get_app_paths()
 
         # Verify Jekyll install
         if not self.jekyll_path:
@@ -215,11 +216,11 @@ class HenryTextEditor:
             jekyll_version = out.split()[1]
             self._update_statusline(self.jekyll_path + " " + jekyll_version)
 
-        # Verify Gem install
-        if not self.gem_path:
-            response = Messagebox.ok("An installation of Gem was not found on your system. You can edit your sites, but you will not be able to use the built-in Publish feature.",
-                title="Gem Not Found")
-            # disable Publish... menu item
+        # Verify Ruby install
+        if not self.ruby_path:
+            # notify user Ruby was not found and Publish... will be disabled
+            response = Messagebox.ok("An installation of Ruby was not found on your system. You can edit your sites, but you will not be able to use the built-in 'Publish...' feature.",
+                title="Ruby Not Found")
 
         # Handle closing/exiting
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -349,6 +350,8 @@ categories: blog
 
     def _select_project(self):
         project_path = filedialog.askdirectory()
+        if not project_path:
+            return
         self._open_project(f"{project_path}/")
 
     def _open_project(self, project_path):
@@ -370,20 +373,48 @@ categories: blog
         self._update_statusline(project_path)
         self.project_path = project_path
 
-        if self.gem_path(): # Enable Publish... menu item if Gem is installed
-            self.project_menu.entryconfig('Publish...', state='normal')
+        if self.ruby_path: # Enable Publish... menu item if Ruby is installed
+            self.project_menu.entryconfig('📡 Publish...', state='normal')
 
         self.is_project_open = True
 
     def _publish_project(self):
         destination = filedialog.askdirectory(title="Select build destination")
+        if not destination:
+            return
+
+        self._show_statusline_spinner = True
+        # Start background thread for the build
+        project_build_thread = threading.Thread(
+            target=self._run_project_build,
+            args=(destination,),
+            daemon=True
+        )
+        project_build_thread.start()
+
+    def _run_project_build(self, destination):
         code, out, err = build_jekyll_site(self.jekyll_path, self.project_path, destination)
 
+        # When finished, schedule UI update on the main thread
+        self.root.after(0, self._build_finished, code, err)
+
+    def _build_finished(self, code, err):
         if code == 0:
             self._show_overlay("✅ Site build completed successfully.")
         else:
-            self._show_overlay("ERROR!!! Build failed.")
-            print(err)
+            self._show_overlay(f"🚫 Build failed.\n{err}")
+
+        self._show_statusline_spinner = False
+        self._update_statusline(self.project_path)
+
+    def _run_statusline_spinner(self):
+        if getattr(self, "_show_statusline_spinner", None) is False or None:
+            self.current_spin = ""
+            return  # stop the spinner
+
+        self.current_spin += "."
+        self._update_statusline(self.current_spin)
+        self.root.after(1000, self._run_statusline_spinner()) # schedule next tick
 
     def _undo_action(self):
         """Undo the last action."""

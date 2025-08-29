@@ -81,7 +81,7 @@ def build_jekyll_site(jekyll_path="jekyll", site_dir="my_jekyll_site", destinati
         str(site_dir),
         "--destination",
         str(destination_dir),
-    ]
+    ] # Command: jekyll build --source {site_dir} --destination {destination_dir}
 
     result = subprocess.run(
         cmd,
@@ -94,34 +94,36 @@ def build_jekyll_site(jekyll_path="jekyll", site_dir="my_jekyll_site", destinati
 
 
 def get_app_paths():
-    """Check PATH to find Jekyll install."""
-    # check if ruby path exists
+    """Check PATH to find Ruby and Jekyll install."""
+    # check if .gem path exists; the Ruby binary is located here on Mac systems
     gem_path = ""
-    gem_root = Path(os.path.expanduser('~') + "/.gem/ruby")
-    if not gem_root.is_dir():
-        # gem dir does not exist
+    gem_user_path = Path(os.path.expanduser('~') + "/.gem/ruby")
+    if not gem_user_path.is_dir():
+        # .gem dir does not exist
         gem_path = ""
     else:
+        # there is a .gem path, so we need to find the ruby version number so we can get the /bin path
         version_pattern = re.compile(r"^\d+\.\d+\.\d+$")
-        for entry in gem_root.iterdir():
+        for entry in gem_user_path.iterdir():
             if entry.is_dir() and version_pattern.match(entry.name):
-                gem_path = str(gem_root) + "/" + entry.name + "/bin"
+                gem_path = str(gem_user_path) + "/" + entry.name + "/bin"
                 break
-
-        #raise FileNotFoundError("No Ruby‑version directory found in ~/.gem/ruby")
 
     system_path = os.pathsep.join([p for p in os.environ['PATH'].split(os.pathsep)])
     user_path = os.path.expanduser('~') + "/bin"
-    search_path = user_path + ":" + gem_path + ":" + system_path
+    search_path = user_path + gem_path + ":" + system_path
     jekyll_path = shutil.which('jekyll', path=search_path)
+    ruby_path = shutil.which('ruby', path=search_path)
 
-    print("System:::" + str(system_path))
-    print("User  :::" + str(user_path))
-    print("Gem   :::" + str(gem_path))
-    print("Search:::" + str(search_path))
-    print("FOUND :::" + str(jekyll_path))
+    print("System :::" + str(system_path))
+    print("User   :::" + str(user_path))
+    print("Search :::" + str(search_path))
+    print("")
+    print("FOUND")
+    print("Ruby   :::" + str(ruby_path))
+    print("Jekyll :::" + str(jekyll_path))
 
-    return search_path, gem_path, jekyll_path
+    return search_path, ruby_path, jekyll_path
 
 
 def create_directory(directory_path):
