@@ -96,9 +96,9 @@ class HenryTextEditor:
         #self.file_submenu.add_command(label="New Project...", command=self._new_file, state="disabled")
         #self.file_submenu.add_command(label="📂 Open Project...", command=self._new_file, state="disabled")
         #self.file_submenu.add_separator()
-        self.file_submenu.add_command(label="➕ New Post", command=self._new_file)
-        self.file_submenu.add_command(label="📄 Open...", command=self._open_file)
-        self.file_submenu.add_command(label="💾 Save", command=self._save_file)
+        self.file_submenu.add_command(label="➕ New Post", command=self._new_file, accelerator="Ctrl+n")
+        self.file_submenu.add_command(label="📄 Open...", command=self._open_file, accelerator="Ctrl+o")
+        self.file_submenu.add_command(label="💾 Save", command=self._save_file, accelerator="Ctrl+s")
         self.file_submenu.add_command(label="Save as...", command=self._save_file, state="disabled")
 
         ## Edit Submenu
@@ -107,24 +107,24 @@ class HenryTextEditor:
         self.edit_submenu.add_command(label="Undo", command=self._undo_action)
         self.edit_submenu.add_command(label="Redo", command=self._redo_action)
         self.edit_submenu.add_separator()
-        self.edit_submenu.add_command(label="✂️ Cut", command=self._cut_text)
-        self.edit_submenu.add_command(label="📋 Copy", command=self._copy_text)
-        self.edit_submenu.add_command(label="Paste", command=self._paste_text)
+        self.edit_submenu.add_command(label="✂️ Cut", command=self._cut_text, accelerator="Ctrl+x")
+        self.edit_submenu.add_command(label="📋 Copy", command=self._copy_text, accelerator="Ctrl+c")
+        self.edit_submenu.add_command(label="Paste", command=self._paste_text, accelerator="Ctrl+v")
         self.edit_submenu.add_separator()
-        self.edit_submenu.add_command(label="Select All", command=self._select_all)
+        self.edit_submenu.add_command(label="Select All", command=self._select_all, accelerator="Ctrl+a")
 
         ## Insert Submenu
         self.insert_submenu = ttk.Menu(self.main_menu, tearoff=0)
         self.main_menu.add_cascade(label="Insert", menu=self.insert_submenu)
-        self.insert_submenu.add_command(label="Date/Time", command=self._new_file, state="disabled")
+        self.insert_submenu.add_command(label="Date/Time", command=self._new_file, state="disabled", accelerator="Ctrl+Shift+O")
         self.insert_submenu.add_command(label="Image...", command=self._new_file, state="disabled")
         self.insert_submenu.add_command(label="Table...", command=self._new_file, state="disabled")
-        self.insert_submenu.add_command(label="Link", command=self._new_file, state="disabled")
+        self.insert_submenu.add_command(label="Link", command=self._new_file, state="disabled", accelerator="Ctrl+Shift+l")
 
         ## Help Submenu
         self.help_submenu = ttk.Menu(self.main_menu, tearoff=0)
         self.main_menu.add_cascade(label="Help", menu=self.help_submenu)
-        self.help_submenu.add_command(label="Getting Started", command=self._show_about_dialog, state="disabled")
+        self.help_submenu.add_command(label="Getting Started", command=self._show_about_dialog, state="disabled", accelerator="F1")
         self.help_submenu.add_separator()
         self.help_submenu.add_command(label="Submit a Bug report...", command=self._show_about_dialog, state="disabled")
         self.help_submenu.add_command(label="Submit Feedback...", command=self._show_about_dialog, state="disabled")
@@ -134,10 +134,10 @@ class HenryTextEditor:
 
         ## Settings
         self.main_menu.add_separator()
-        self.main_menu.add_command(label="⚙️ Settings...", command=self._show_about_dialog, state="disabled")
-        self.main_menu.add_command(label="🪪 Project Properties", command=self._show_info_pane)
+        self.main_menu.add_command(label="⚙️ Settings...", command=self._show_about_dialog, state="disabled", accelerator="Ctrl+Alt+s")
+        self.main_menu.add_command(label="🪪 Project Properties", command=self._show_info_pane, accelerator="Ctrl+Alt+p")
         self.main_menu.add_separator()
-        self.main_menu.add_command(label="Exit", command=self._on_close)
+        self.main_menu.add_command(label="Exit", command=self._on_close, accelerator="Ctrl+q")
         # --------------- Main Menu ---------------
 
         # --------------- Project Info Button ---------------
@@ -286,9 +286,16 @@ categories: blog
     def _open_file(self):
         """Open an existing file."""
         self._check_save_before_close()
+        if not self.project_path:
+            initial_dir = ""
+        else:
+            initial_dir = self.project_path
+
         file_path = filedialog.askopenfilename(defaultextension=".md",
-                                               filetypes=[("Markdown", "*.md"),
+                                               initialdir=initial_dir,
+                                               filetypes=[("Markdown", "*.md *.markdown"),
                                                           ("Text Files", "*.txt"),
+                                                          ("HTML", "*.htm *.html"),
                                                           ("All Files", "*.*")])
         if file_path:
             with open(file_path, 'r') as file:
@@ -302,8 +309,9 @@ categories: blog
     def _save_file(self):
         """Save the current file."""
         file_path = filedialog.asksaveasfilename(defaultextension=".md",
-                                                 filetypes=[("Markdown", "*.md"),
+                                                 filetypes=[("Markdown", "*.md *.markdown"),
                                                             ("Text Files", "*.txt"),
+                                                            ("HTML", "*.htm *.html"),
                                                             ("All Files", "*.*")])
         if file_path:
             with open(file_path, 'w') as file:
