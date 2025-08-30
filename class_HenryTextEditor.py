@@ -4,6 +4,7 @@ import tkinter.font as tkfont
 from tkinter import filedialog, simpledialog, Text, Scrollbar, Label, Frame
 import ttkbootstrap as ttk
 from ttkbootstrap.dialogs import Messagebox
+from datetime import datetime
 import threading
 #from ttkbootstrap.constants import *
 #import glob
@@ -36,8 +37,7 @@ class HenryTextEditor:
         self.root.bind_all('<Control-o>',       self._select_project)
         self.root.bind_all('<Control-n>',       self._new_project)
         self.root.bind_all('<Control-s>',       self._save_file)
-        # self.root.bind_all("<Control-Shift-S>", saveas_com)
-        # self.root.bind_all('<Control-w>', close_com)
+        #self.root.bind_all('<Control-w>',       self._close_current_file)
         self.root.bind_all('<Control-q>',       self._on_close)
         self.root.bind_all('<Control-z>',       self._undo_action)
         self.root.bind_all('<Control-Shift-z>', self._redo_action)
@@ -276,10 +276,11 @@ class HenryTextEditor:
 
     def _new_file(self, event=None):
         """Create a new file."""
-        header = """---
+        post_date = datetime.today().strftime('%Y-%m-%d %H:%M')
+        header = f"""---
 layout: post
 title:  "My New Post"
-date:   2025-08-22 09:41:47 -1000
+date:   {post_date}
 categories: blog
 ---  
 
@@ -291,20 +292,22 @@ categories: blog
         self.root.title("Henry - New File")
         self.modified = False
 
-    def _open_file(self, event=None):
+    def _open_file(self, file_path="", event=None):
         """Open an existing file."""
         self._check_save_before_close()
-        if not self.project_path:
-            initial_dir = ""
-        else:
-            initial_dir = self.project_path
 
-        file_path = filedialog.askopenfilename(defaultextension=".md",
-                                               initialdir=initial_dir,
-                                               filetypes=[("Markdown", "*.md *.markdown"),
-                                                          ("Text Files", "*.txt"),
-                                                          ("HTML", "*.htm *.html"),
-                                                          ("All Files", "*.*")])
+        if not file_path: # show the file dialog
+            if not self.project_path:
+                initial_dir = ""
+            else:
+                initial_dir = self.project_path
+
+            file_path = filedialog.askopenfilename(defaultextension=".md",
+                                                   initialdir=initial_dir,
+                                                   filetypes=[("Markdown", "*.md *.markdown"),
+                                                              ("Text Files", "*.txt"),
+                                                              ("HTML", "*.htm *.html"),
+                                                              ("All Files", "*.*")])
         if file_path:
             with open(file_path, 'r') as file:
                 content = file.read()
@@ -394,7 +397,29 @@ categories: blog
         if self.ruby_path: # Enable Publish... menu item if Ruby is installed
             self.project_menu.entryconfig('📡 Publish...', state='normal')
 
+        self._populate_project_menu()
+
         self.is_project_open = True
+
+    def _populate_project_menu(self):
+        if not self.project_path:
+            return
+
+        self.project_pages_menu = ttk.Menu(self.main_menu, tearoff=0)
+
+        recent_files = get_recent_markdown_files(self.project_path + "_posts")
+
+        self.project_pages_menu.delete(0, tk.END)
+        for file_path in recent_files:
+            self.project_pages_menu.add_command(
+                label=os.path.basename(file_path),
+                command=lambda p=file_path: self._open_file(p)
+            )
+        self.project_pages_menu.add_separator()
+        self.project_pages_menu.add_command(label="More...", command=self._open_file)
+
+        self.project_menu.add_separator()
+        self.project_menu.add_cascade(label="Posts", menu=self.project_pages_menu)
 
     def _publish_project(self):
         destination = filedialog.askdirectory(title="Select build destination")

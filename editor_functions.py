@@ -4,6 +4,20 @@ import sys, os
 import shutil
 from pathlib import Path
 
+def get_recent_markdown_files(directory):
+    file_list = []
+    for root, _, files in os.walk(directory):
+        for file_name in files:
+            if file_name.lower().endswith(('.md', '.markdown')):
+                path = os.path.join(root, file_name)
+                file_list.append((os.path.getmtime(path), path))
+
+    # Keep only the six most recent files
+    file_list.sort(reverse=True, key=lambda x: x[0])
+    recent_files = [p for _, p in file_list[:5]]
+
+    return recent_files
+
 def count_words_outside_header(text=""):
     """Return a word count that does not include words that are in the Jekyll headers."""
     lines = text.split('\n')
