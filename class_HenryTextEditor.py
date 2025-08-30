@@ -20,34 +20,33 @@ class HenryTextEditor:
         self.config = []             # dict for _config.yml
         self.config_path = ""        # location of _config.yml
         self.project_path = ""       # dir for project
-        self.current_spin = ""
+        self.current_spin = ""       # var for progress meter
 
         self.modified = False        # is the text area modified?
         self.is_project_open = False # is a project open?
         self._show_statusline_spinner = False
 
         # Define the editor font
-        self.editor_font = tkfont.Font(family="Courier", size=12)
+        self.editor_font = tkfont.Font(family="Courier", size=14)
 
         # Key Bindings
-        self.root.bind_all('<Control-a>', self._select_all)
+        self.root.bind_all('<Control-a>',       self._select_all)
         self.root.bind_all('<Control-Shift-n>', self._new_file)
         self.root.bind_all('<Control-Shift-o>', self._open_file)
-        self.root.bind_all('<Control-o>', self._select_project)
-        self.root.bind_all('<Control-n>', self._new_project)
-        self.root.bind_all('<Control-s>', self._save_file)
+        self.root.bind_all('<Control-o>',       self._select_project)
+        self.root.bind_all('<Control-n>',       self._new_project)
+        self.root.bind_all('<Control-s>',       self._save_file)
         # self.root.bind_all("<Control-Shift-S>", saveas_com)
         # self.root.bind_all('<Control-w>', close_com)
-        self.root.bind_all('<Control-q>', self._on_close)
-        self.root.bind_all('<Control-z>', self._undo_action)
+        self.root.bind_all('<Control-q>',       self._on_close)
+        self.root.bind_all('<Control-z>',       self._undo_action)
         self.root.bind_all('<Control-Shift-z>', self._redo_action)
-        self.root.bind_all('<Control-x>', self._cut_text)
-        self.root.bind_all('<Control-c>', self._copy_text)
-        self.root.bind_all('<Control-v>', self._paste_text)
-        # self.root.bind_all('<F11>', full_screen)
+        self.root.bind_all('<Control-x>',       self._cut_text)
+        self.root.bind_all('<Control-c>',       self._copy_text)
+        self.root.bind_all('<Control-v>',       self._paste_text)
         # self.root.bind("<Escape>", lambda event: root.attributes("-zoomed", False))
-        self.root.bind_all('<Control-plus>', self._increase_font_size)
-        self.root.bind_all('<Control-minus>', self._decrease_font_size)
+        self.root.bind_all('<Control-plus>',    self._increase_font_size)
+        self.root.bind_all('<Control-minus>',   self._decrease_font_size)
 
         # Get screen width and height
         screen_width = self.root.winfo_screenwidth()
@@ -149,6 +148,8 @@ class HenryTextEditor:
         # Create a Text widget for the main editing area
         self.text_area = ttk.Text(self.root, font=self.editor_font, wrap='word', undo=True)
         self.text_area.pack(fill=tk.BOTH, expand=1)
+        self.text_area.bind("<Button-3>", self._show_edit_context) # bind mouse right-click
+        self.root.bind("<Button-1>", self._hide_context) # hide context menu when clicking elsewhere
 
         # Create a Scrollbar and attach it to the Text widget
         self.scrollbar = ttk.Scrollbar(self.text_area)
@@ -236,6 +237,13 @@ class HenryTextEditor:
 
         self._save_project_config()  # write _config.yml
 
+    def _show_edit_context(self, event=None):
+        # Post the submenu at the mouse position
+        self.edit_submenu.post(event.x_root, event.y_root)
+
+    def _hide_context(self, event=None):
+        self.edit_submenu.unpost()
+
     def _increase_font_size(self, event=None):
         """Increment the editor font size by 1 point."""
         current_size = self.editor_font.cget('size')
@@ -266,7 +274,7 @@ class HenryTextEditor:
         self.info_pane_title.insert(0, self.config['title'])
         self.info_pane.lift()  # bring to front
 
-    def _new_file(self):
+    def _new_file(self, event=None):
         """Create a new file."""
         header = """---
 layout: post
@@ -283,7 +291,7 @@ categories: blog
         self.root.title("Henry - New File")
         self.modified = False
 
-    def _open_file(self):
+    def _open_file(self, event=None):
         """Open an existing file."""
         self._check_save_before_close()
         if not self.project_path:
@@ -306,7 +314,7 @@ categories: blog
                 self._update_status_bar()
                 self.modified = False
 
-    def _save_file(self):
+    def _save_file(self, event=None):
         """Save the current file."""
         file_path = filedialog.asksaveasfilename(defaultextension=".md",
                                                  filetypes=[("Markdown", "*.md *.markdown"),
@@ -320,7 +328,7 @@ categories: blog
                 self.root.title(f"Henry - {file_path}")
                 self.modified = False
 
-    def _on_close(self):
+    def _on_close(self, event=None):
         """Exit the editor."""
         save = self._check_save_before_close()
         if not save == "Cancel":
@@ -331,7 +339,7 @@ categories: blog
         with open(self.config_path, "w", encoding="utf-8") as f:
             yaml.safe_dump(self.config, f, sort_keys=False, default_flow_style=False)
 
-    def _new_project(self):
+    def _new_project(self, event=None):
         """Create a new Jekyll site."""
         # get the site name from the user
         site_name = simpledialog.askstring(
@@ -364,7 +372,7 @@ categories: blog
             return
         self._open_project(f"{project_path}/")
 
-    def _open_project(self, project_path):
+    def _open_project(self, project_path, event=None):
         """Open an existing Jekyll site."""
         self.config_path = os.path.join(project_path, "_config.yml")
         if not os.path.isfile(self.config_path):
@@ -427,7 +435,7 @@ categories: blog
         self._update_statusline(self.current_spin)
         self.root.after(1000, self._run_statusline_spinner) # schedule next tick
 
-    def _undo_action(self):
+    def _undo_action(self, event=None):
         """Undo the last action."""
         try:
             self.text_area.edit_undo()
@@ -436,7 +444,7 @@ categories: blog
         self._update_status_bar()
         self._on_text_change()
 
-    def _redo_action(self):
+    def _redo_action(self, event=None):
         """Redo the last undone action."""
         try:
             self.text_area.edit_redo()
@@ -445,17 +453,17 @@ categories: blog
         self._update_status_bar()
         self._on_text_change()
 
-    def _cut_text(self):
+    def _cut_text(self, event=None):
         """Cut selected text."""
         self.text_area.event_generate('<<Cut>>')
         self._update_status_bar()
         self._on_text_change()
 
-    def _copy_text(self):
+    def _copy_text(self, event=None):
         """Copy selected text."""
         self.text_area.event_generate('<<Copy>>')
 
-    def _paste_text(self):
+    def _paste_text(self, event=None):
         """Paste text from clipboard."""
         self.text_area.event_generate('<<Paste>>')
         self._update_status_bar()
