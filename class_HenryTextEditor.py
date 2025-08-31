@@ -405,21 +405,47 @@ categories: blog
         if not self.project_path:
             return
 
-        self.project_pages_menu = ttk.Menu(self.main_menu, tearoff=0)
+        recent_posts = get_recent_markdown_files(self.project_path + "_posts")
+        recent_pages = get_recent_markdown_files(self.project_path + "_pages")
+        index_pages = get_recent_markdown_files(self.project_path, recursive=False)
+        recent_pages += index_pages # combine the lists of Pages
 
-        recent_files = get_recent_markdown_files(self.project_path + "_posts")
-
-        self.project_pages_menu.delete(0, tk.END)
-        for file_path in recent_files:
-            self.project_pages_menu.add_command(
+        # append Posts to the project menu
+        self.project_menu.add_separator()
+        for file_path in recent_posts[:3]:
+            self.project_menu.add_command(
                 label=os.path.basename(file_path),
                 command=lambda p=file_path: self._open_file(p)
             )
-        self.project_pages_menu.add_separator()
-        self.project_pages_menu.add_command(label="More...", command=self._open_file)
 
+        # self.project_pages_menu.delete(0, tk.END) # delete 4 to tk.END
+        self.project_posts_more_menu = ttk.Menu(self.main_menu, tearoff=0)
+        self.project_posts_more_menu.add_command(label="➕ New Post", command=self._new_file)
+        self.project_posts_more_menu.add_separator()
+        for file_path in recent_posts[3:]:
+            self.project_posts_more_menu.add_command(
+                label=os.path.basename(file_path),
+                command=lambda p=file_path: self._open_file(p)
+            )
+        self.project_menu.add_cascade(label="More...", menu=self.project_posts_more_menu)
+
+        # append Pages to the project menu
         self.project_menu.add_separator()
-        self.project_menu.add_cascade(label="Posts", menu=self.project_pages_menu)
+        for file_path in recent_pages[:3]:
+            self.project_menu.add_command(
+                label=os.path.basename(file_path),
+                command=lambda p=file_path: self._open_file(p)
+            )
+
+        self.project_pages_more_menu = ttk.Menu(self.main_menu, tearoff=0)
+        self.project_pages_more_menu.add_command(label="➕ New Page", command=self._new_file)
+        self.project_pages_more_menu.add_separator()
+        for file_path in recent_pages[3:]:
+            self.project_pages_more_menu.add_command(
+                label=os.path.basename(file_path),
+                command=lambda p=file_path: self._open_file(p)
+            )
+        self.project_menu.add_cascade(label="More...", menu=self.project_pages_more_menu)
 
     def _publish_project(self):
         destination = filedialog.askdirectory(title="Select build destination")

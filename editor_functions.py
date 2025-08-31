@@ -4,17 +4,19 @@ import sys, os
 import shutil
 from pathlib import Path
 
-def get_recent_markdown_files(directory):
+def get_recent_markdown_files(directory, recursive=True):
     file_list = []
     for root, _, files in os.walk(directory):
         for file_name in files:
             if file_name.lower().endswith(('.md', '.markdown')):
                 path = os.path.join(root, file_name)
                 file_list.append((os.path.getmtime(path), path))
+        if not recursive:
+            break
 
     # Keep only the six most recent files
     file_list.sort(reverse=True, key=lambda x: x[0])
-    recent_files = [p for _, p in file_list[:5]]
+    recent_files = [p for _, p in file_list[:24]]
 
     return recent_files
 
