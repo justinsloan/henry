@@ -187,7 +187,7 @@ class HenryTextEditor:
         self.info_pane_title.pack(padx=5, pady=(0,5), fill='x')
 
         # _config.yml button
-        btn = ttk.Button(self.info_pane, text="_config.yml", command=self._open_file, bootstyle="light")
+        btn = ttk.Button(self.info_pane, text="_config.yml", command=lambda: self._open_file(self.config_path), bootstyle="light")
         btn.pack(pady=(0, 5))
 
         # Close button
@@ -295,6 +295,7 @@ categories: blog
     def _open_file(self, file_path="", event=None):
         """Open an existing file."""
         self._check_save_before_close()
+        print(f"Open Request for {file_path}")
 
         if not file_path: # show the file dialog
             if not self.project_path:
