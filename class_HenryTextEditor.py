@@ -21,6 +21,7 @@ class HenryTextEditor:
         self.config = []             # dict for _config.yml
         self.config_path = ""        # location of _config.yml
         self.project_path = ""       # dir for project
+        self.current_file_path = ""  # path to currently open file
         self.current_spin = ""       # var for progress meter
 
         self.modified = False        # is the text area modified?
@@ -180,19 +181,45 @@ class HenryTextEditor:
         # Position it on the right side of the window
         self.info_pane.place(relx=.97, rely=0.5, anchor='e')
 
-        # Entry for the title
-        lbl = ttk.Label(self.info_pane, text="Title:")
-        lbl.pack(anchor='w', padx=5, pady=(2, 0))
-        self.info_pane_title = ttk.Entry(self.info_pane, width=30)
-        self.info_pane_title.pack(padx=5, pady=(0,5), fill='x')
+        widget_specs = [
+            {"label": "Title:", "command": self._show_info_pane},
+            {"label": "Email:", "command": self._show_info_pane},
+            {"label": "Description:", "command": self._show_info_pane},
+            {"label": "URL:", "command": self._show_info_pane},
+            {"label": "Base URL:", "command": self._show_info_pane},
+        ]
 
+        _yaml_config_entry_widgets = []
+        for widget in widget_specs:
+            row = ttk.Frame(self.info_pane)
+            row.pack(side=tk.TOP, padx=5, pady=3, fill=tk.X)
+
+            label = ttk.Label(row, text=widget["label"])
+            label.pack(side=tk.LEFT, padx=5, pady=(2, 0))
+
+            entry = ttk.Entry(row, width=30)
+            entry.pack(side=tk.RIGHT, padx=5, pady=(0, 5), fill=tk.X)
+            _yaml_config_entry_widgets.append(entry)
+
+        self.yaml_config = {widget["label"]: entry
+                                       for widget, entry in zip(widget_specs,
+                                                               _yaml_config_entry_widgets)}
+
+        # how to access later:
+        # self.yaml_config["URL:"].delete(0, tk.END)
+        # self.yaml_config["URL:"].insert(0, "http://example.com")
+
+        # create bottom button frame
+        row = ttk.Frame(self.info_pane)
+        row.pack(side=tk.TOP, padx=5, pady=3, fill=tk.X)
         # _config.yml button
-        btn = ttk.Button(self.info_pane, text="_config.yml", command=lambda: self._open_file(self.config_path), bootstyle="light")
-        btn.pack(pady=(0, 5))
+        btn = ttk.Button(row, text="_config.yml",
+                         command=lambda: self._open_file(self.config_path), bootstyle="light")
+        btn.pack(side=tk.LEFT, pady=(0, 5))
 
         # Close button
-        self.info_pane_close_btn = ttk.Button(self.info_pane, text="Close", command=self._close_info_pane)
-        self.info_pane_close_btn.pack(anchor='w', pady=(0, 5))
+        self.info_pane_close_btn = ttk.Button(row, text="Close", command=self._close_info_pane)
+        self.info_pane_close_btn.pack(side=tk.RIGHT, pady=(0, 5))
 
         self.info_pane.lower()  # hide initially
         # -----------------------------------
@@ -231,9 +258,14 @@ class HenryTextEditor:
     def _close_info_pane(self):
         """Save project config and hide the info pane."""
         self.info_pane.lower()  # hide the pane
-
-        self.config['title'] = self.info_pane_title.get()
         self.root.title(f"Henry - {self.config['title']}")
+
+        # process and save changes
+        self.config['title'] = self.yaml_config["Title:"].get()
+        self.config['email'] = self.yaml_config["Email:"].get()
+        self.config['description'] = self.yaml_config["Description:"].get()
+        self.config['url'] = self.yaml_config["URL:"].get()
+        self.config['baseurl'] = self.yaml_config["Base URL:"].get()
 
         self._save_project_config()  # write _config.yml
 
@@ -270,8 +302,17 @@ class HenryTextEditor:
             return
 
         # Pre‑populate entry with the window title
-        self.info_pane_title.delete(0, tk.END)
-        self.info_pane_title.insert(0, self.config['title'])
+        self.yaml_config["Title:"].delete(0, tk.END)
+        self.yaml_config["Title:"].insert(0, self.config['title'])
+        self.yaml_config["Email:"].delete(0, tk.END)
+        self.yaml_config["Email:"].insert(0, self.config['email'])
+        self.yaml_config["Description:"].delete(0, tk.END)
+        self.yaml_config["Description:"].insert(0, self.config['description'])
+        self.yaml_config["URL:"].delete(0, tk.END)
+        self.yaml_config["URL:"].insert(0, self.config['url'])
+        self.yaml_config["Base URL:"].delete(0, tk.END)
+        self.yaml_config["Base URL:"].insert(0, self.config['baseurl'])
+
         self.info_pane.lift()  # bring to front
 
     def _new_file(self, event=None):
@@ -290,6 +331,7 @@ categories: blog
         self.text_area.insert(tk.END, header)
 
         self.root.title("Henry - New File")
+        self.current_file_path = ""
         self.modified = False
 
     def _open_file(self, file_path="", event=None):
@@ -315,17 +357,23 @@ categories: blog
                 self.text_area.delete(1.0, tk.END)
                 self.text_area.insert(tk.END, content)
                 self.root.title(f"Henry - {file_path}")
+                self.current_file_path = file_path
                 self._update_status_bar()
                 self.modified = False
 
-    def _save_file(self, event=None):
+    def _save_file(self, file_path=""):
         """Save the current file."""
-        file_path = filedialog.asksaveasfilename(defaultextension=".md",
-                                                 filetypes=[("Markdown", "*.md *.markdown"),
-                                                            ("Text Files", "*.txt"),
-                                                            ("HTML", "*.htm *.html"),
-                                                            ("All Files", "*.*")])
-        if file_path:
+        if not file_path:
+            if not self.current_file_path:
+                file_path = filedialog.asksaveasfilename(defaultextension=".md",
+                                                         filetypes=[("Markdown", "*.md *.markdown"),
+                                                                    ("Text Files", "*.txt"),
+                                                                    ("HTML", "*.htm *.html"),
+                                                                    ("All Files", "*.*")])
+            else:
+                file_path = self.current_file_path
+
+        if file_path: # double check we have a path before we try to save
             with open(file_path, 'w') as file:
                 content = self.text_area.get(1.0, tk.END)
                 file.write(content)
