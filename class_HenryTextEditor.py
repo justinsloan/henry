@@ -1,13 +1,14 @@
+import os
 import yaml
 import tkinter as tk
 import tkinter.font as tkfont
 from tkinter import filedialog, simpledialog, Text, Scrollbar, Label, Frame
 import ttkbootstrap as ttk
 from ttkbootstrap.dialogs import Messagebox
+from ttkbootstrap.constants import *
 from datetime import datetime
+from pathlib import Path
 import threading
-#from ttkbootstrap.constants import *
-#import glob
 
 from editor_functions import *
 
@@ -28,6 +29,13 @@ class HenryTextEditor:
         self.is_project_open = False # is a project open?
         self._show_statusline_spinner = False
 
+        # Application icons
+        ICONS = Path(__file__).parent / 'icons'
+        self.icons = {
+            "menu": ttk.PhotoImage(file=ICONS / 'menu_icon_16.png'),
+            "plus": ttk.PhotoImage(file=ICONS / 'plus_icon_16.png')
+        }
+
         # Define the editor font
         self.editor_font = tkfont.Font(family="Courier", size=14)
 
@@ -38,6 +46,7 @@ class HenryTextEditor:
         self.root.bind_all('<Control-o>',       self._select_project)
         self.root.bind_all('<Control-n>',       self._new_project)
         self.root.bind_all('<Control-s>',       self._save_file)
+        self.root.bind_all('<Control-Shift-s>', self._save_file)
         #self.root.bind_all('<Control-w>',       self._close_current_file)
         self.root.bind_all('<Control-q>',       self._on_close)
         self.root.bind_all('<Control-z>',       self._undo_action)
@@ -66,7 +75,7 @@ class HenryTextEditor:
         self.button_bar.pack(side=tk.TOP, fill=tk.X)
 
         # --------------- Open Menu ---------------
-        self.project_menubutton = ttk.Menubutton(self.button_bar, text="🗃️ Project", bootstyle="light")
+        self.project_menubutton = ttk.Menubutton(self.button_bar, text="🗃️ Project", bootstyle="light-outline")
         self.project_menubutton.pack(side=tk.LEFT)
 
         self.project_menu = ttk.Menu(self.project_menubutton, tearoff=0)
@@ -79,12 +88,12 @@ class HenryTextEditor:
         # --------------- Open Menu ---------------
 
         # --------------- New Post Button ---------------
-        self.new_post_button = ttk.Button(self.button_bar, text="➕", command=self._new_file, bootstyle="link")
+        self.new_post_button = ttk.Button(self.button_bar, text="➕", image=self.icons['plus'], command=self._new_file, bootstyle="link")
         self.new_post_button.pack(side=tk.LEFT)
         # --------------- New Post Button ---------------
 
         # --------------- Main Menu ---------------
-        self.main_menubutton = ttk.Menubutton(self.button_bar, text="Ⓜ️ Menu")
+        self.main_menubutton = ttk.Menubutton(self.button_bar, text="Menu", bootstyle=(SECONDARY))
         self.main_menubutton.pack(side=tk.RIGHT)
 
         self.main_menu = ttk.Menu(self.main_menubutton, tearoff=0)
@@ -99,7 +108,7 @@ class HenryTextEditor:
         self.file_submenu.add_command(label="➕ New Post", command=self._new_file, accelerator="Ctrl+n")
         self.file_submenu.add_command(label="📄 Open...", command=self._open_file, accelerator="Ctrl+o")
         self.file_submenu.add_command(label="💾 Save", command=self._save_file, accelerator="Ctrl+s")
-        self.file_submenu.add_command(label="Save as...", command=self._save_file, state="disabled")
+        self.file_submenu.add_command(label="Save as...", command=self._save_file, accelerator="Ctrl+Shift+s")
 
         ## Edit Submenu
         self.edit_submenu = ttk.Menu(self.main_menu, tearoff=0)
@@ -214,7 +223,7 @@ class HenryTextEditor:
         row.pack(side=tk.TOP, padx=5, pady=3, fill=tk.X)
         # _config.yml button
         btn = ttk.Button(row, text="_config.yml",
-                         command=lambda: self._open_file(self.config_path), bootstyle="light")
+                         command=lambda p=self.config_path: self._open_file(p), bootstyle="light")
         btn.pack(side=tk.LEFT, pady=(0, 5))
 
         # Close button
@@ -225,7 +234,7 @@ class HenryTextEditor:
         # -----------------------------------
 
         # Bind the Text widget to update the status bar
-        self.text_area.bind('<KeyRelease>', self._update_status_bar)
+        self.text_area.bind('<KeyRelease>', self._update_word_count)
 
         # Track changes to the text area
         self.text_area.bind('<KeyPress>', self._on_text_change)
@@ -334,10 +343,10 @@ categories: blog
         self.current_file_path = ""
         self.modified = False
 
-    def _open_file(self, file_path="", event=None):
+    def _open_file(self, file_path="", **kwargs):
         """Open an existing file."""
         self._check_save_before_close()
-        print(f"Open Request for {file_path}")
+        print(f"Open Request for: {file_path}")
 
         if not file_path: # show the file dialog
             if not self.project_path:
@@ -356,29 +365,56 @@ categories: blog
                 content = file.read()
                 self.text_area.delete(1.0, tk.END)
                 self.text_area.insert(tk.END, content)
-                self.root.title(f"Henry - {file_path}")
-                self.current_file_path = file_path
-                self._update_status_bar()
-                self.modified = False
 
-    def _save_file(self, file_path=""):
-        """Save the current file."""
+            self.root.title(f"Henry - {file_path}")
+            self.current_file_path = file_path
+            self._update_word_count()
+            self.modified = False
+            self._show_overlay(f"✅ Opened {os.path.basename(file_path)}")
+            self._update_statusline(f"✅ Opened {os.path.basename(file_path)}")
+
+    def _save_file_as(self, event=None):
+        """Show the file dialog to allow user to save the file with a different path/name."""
+        file_path = filedialog.asksaveasfilename(defaultextension=".md",
+                                                 initialdir=self.current_file_path,
+                                                 filetypes=[("Markdown", "*.md *.markdown"),
+                                                            ("Text Files", "*.txt"),
+                                                            ("HTML", "*.htm *.html"),
+                                                            ("All Files", "*.*")])
+        if not file_path:
+            self._show_overlay("🚫 Cancelled save file.")
+        else:
+            self._save_file(file_path)
+
+    def _save_file(self, event=None, file_path=""):
+        """
+        Save the file to the path provided. If no path is provided, see if there
+        is a file currently open and save that instead.
+        """
+        print(f"Save Request for: {file_path}")
+
         if not file_path:
             if not self.current_file_path:
-                file_path = filedialog.asksaveasfilename(defaultextension=".md",
-                                                         filetypes=[("Markdown", "*.md *.markdown"),
-                                                                    ("Text Files", "*.txt"),
-                                                                    ("HTML", "*.htm *.html"),
-                                                                    ("All Files", "*.*")])
+                self._show_overlay("🚫 No file path provided.")
             else:
                 file_path = self.current_file_path
 
-        if file_path: # double check we have a path before we try to save
-            with open(file_path, 'w') as file:
-                content = self.text_area.get(1.0, tk.END)
-                file.write(content)
+        if not file_path: # double check we have a file path before we save
+            return
+        else:
+            try:
+                with open(file_path, 'w') as file:
+                    content = self.text_area.get(1.0, tk.END)
+                    file.write(content)
+
+                print(f"Saved file: {file_path}")
                 self.root.title(f"Henry - {file_path}")
+                self.current_file_path = file_path
                 self.modified = False
+                self._show_overlay(f"✅ Saved {os.path.basename(file_path)}")
+            except Exception as e:
+                print(e)
+                self._show_overlay("Could not save file.")
 
     def _on_close(self, event=None):
         """Exit the editor."""
@@ -412,19 +448,20 @@ categories: blog
         code, out, err = new_jekyll_site(self.jekyll_path, site_name, folder)
 
         if code == 0:
-            self._show_overlay(f"{site_name} created.")
+            self._show_overlay(f"✅ {site_name} created.")
         else:
             self._show_overlay("ERROR!!! Creating project.")
 
         self._open_project(f"{folder}/{site_name}")
 
-    def _select_project(self):
+    def _select_project(self, event=None):
+        """Opens a file dialog to allow the user to select the root directory of a project."""
         project_path = filedialog.askdirectory()
         if not project_path:
             return
         self._open_project(f"{project_path}/")
 
-    def _open_project(self, project_path, event=None):
+    def _open_project(self, project_path):
         """Open an existing Jekyll site."""
         self.config_path = os.path.join(project_path, "_config.yml")
         if not os.path.isfile(self.config_path):
@@ -435,7 +472,7 @@ categories: blog
             try:
                 self.config = yaml.safe_load(f)
             except yaml.YAMLError as exc:
-                self._update_statusline(f"Error parsing config.yml: {exc}")
+                self._update_statusline(f"Error parsing config.yml:\n{exc}")
                 return
 
         self.root.title(f"Henry - {self.config['title']}")
@@ -449,6 +486,7 @@ categories: blog
         self._populate_project_menu()
 
         self.is_project_open = True
+        self._show_overlay(f"✅ Opened {self.config['title']}")
 
     def _populate_project_menu(self):
         if not self.project_path:
@@ -541,7 +579,7 @@ categories: blog
             self.text_area.edit_undo()
         except tk.TclError:
             pass
-        self._update_status_bar()
+        self._update_word_count()
         self._on_text_change()
 
     def _redo_action(self, event=None):
@@ -550,13 +588,13 @@ categories: blog
             self.text_area.edit_redo()
         except tk.TclError:
             pass
-        self._update_status_bar()
+        self._update_word_count()
         self._on_text_change()
 
     def _cut_text(self, event=None):
         """Cut selected text."""
         self.text_area.event_generate('<<Cut>>')
-        self._update_status_bar()
+        self._update_word_count()
         self._on_text_change()
 
     def _copy_text(self, event=None):
@@ -566,7 +604,7 @@ categories: blog
     def _paste_text(self, event=None):
         """Paste text from clipboard."""
         self.text_area.event_generate('<<Paste>>')
-        self._update_status_bar()
+        self._update_word_count()
         self._on_text_change()
 
     def _select_all(self, event=None):
@@ -580,7 +618,7 @@ categories: blog
         """Show the about dialog."""
         Messagebox.show_info("Henry\n\nA simple editor for Jekyll.", title="About Henry")
 
-    def _update_status_bar(self, event=None):
+    def _update_word_count(self, event=None):
         """Update the status bar with the current word count."""
         content = self.text_area.get(1.0, tk.END)
         word_count = count_words_outside_header(content)
