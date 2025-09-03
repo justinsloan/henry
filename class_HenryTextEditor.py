@@ -90,6 +90,8 @@ class HenryTextEditor:
         self.project_menu.add_command(label="📂 Open Project...", command=self._select_project)
         self.project_menu.add_command(label="🗂️ New Project...", command=self._new_project)
         self.project_menu.add_separator()
+        self.project_menu.add_command(label="Recent Projects", state=tk.DISABLED)
+        self.project_menu.add_separator()
         self.project_menu.add_command(label="📡 Publish...", command=self._publish_project, state="disabled")
         # --------------- Open Menu ---------------
 
@@ -128,10 +130,10 @@ class HenryTextEditor:
         ## Insert Submenu
         self.insert_submenu = ttk.Menu(self.main_menu, tearoff=0)
         self.main_menu.add_cascade(label="Insert", menu=self.insert_submenu)
-        self.insert_submenu.add_command(label="  Date/Time", command=self._new_file, state="disabled", accelerator="Ctrl+Shift+O")
-        self.insert_submenu.add_command(label="  Image...", command=self._new_file, state="disabled")
-        self.insert_submenu.add_command(label="  Table...", command=self._new_file, state="disabled")
-        self.insert_submenu.add_command(label="  Link", command=self._new_file, state="disabled", accelerator="Ctrl+Shift+l")
+        self.insert_submenu.add_command(label="Date/Time", command=self._insert_datetime, accelerator="Ctrl+Shift+O")
+        self.insert_submenu.add_command(label="Image...", command=self._new_file, state="disabled")
+        self.insert_submenu.add_command(label="Table...", command=self._new_file, state="disabled")
+        self.insert_submenu.add_command(label="Link", command=self._insert_link, accelerator="Ctrl+Shift+l")
 
         ## Help Submenu
         self.help_submenu = ttk.Menu(self.main_menu, tearoff=0)
@@ -273,6 +275,9 @@ class HenryTextEditor:
 
         # Handle closing/exiting
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+
+        # Set initial focus to the text area
+        self.text_area.focus_force()
 
     def _set_theme(self, theme="darkly"):
         self._verbose("Theme: " + theme)
@@ -637,6 +642,53 @@ categories: blog
         self.text_area.mark_set('insert', '1.0')
         self.text_area.see('insert')
         return 'break'
+
+    def _get_highlighted_text(self, event=None):
+        return self.text_area.get("sel.first", "sel.last")
+
+    def _insert_text(self, text):
+        # Check if a selection exists
+        try:
+            # Delete the selected text if present
+            print(self._get_highlighted_text())
+            self.text_area.delete("sel.first", "sel.last")
+        except tk.TclError:
+            # No selection – nothing to delete
+            pass
+
+        self.text_area.insert('insert', text)
+
+    def _insert_datetime(self):
+        time_now = datetime.today().strftime('%Y-%m-%d %H:%M')
+        self._insert_text(time_now)
+
+    def _insert_link(self):
+        link_text = (self._get_highlighted_text())
+        if not link_text:
+            self._insert_text("[link](url)")
+        else:
+            self._insert_text("[" + link_text + "](url)")
+            # highlight 'url' after insert
+
+        # 1. Search for the whole link pattern
+        link_start = self.text_area.search(r'\[.*?\]\(url\)', '1.0', stopindex=tk.END, regexp=True)
+        if not link_start:
+            return  # no link found
+
+        # 2. Find the positions of '(' and ')' inside that link
+        open_paren = self.text_area.search(r'\(', link_start, stopindex='end', regexp=True)
+        close_paren = self.text_area.search(r'\)', open_paren, stopindex='end', regexp=True)
+        if not (open_paren and close_paren):
+            return
+
+        # 3. Compute the range that contains the URL (between the parentheses)
+        url_start = f"{open_paren}+1c"  # one character after '('
+        url_end = close_paren  # position of ')'
+
+        # 4. Select the text of the range found
+        self.text_area.tag_add("sel", url_start, url_end)
+        self.text_area.mark_set('insert', url_start)
+        self.text_area.see('insert')
 
     @staticmethod
     def _show_about_dialog():
