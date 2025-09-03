@@ -5,7 +5,7 @@ __author__ = "Justin Sloan"
 from class_HenryTextEditor import *
 
 def main():
-    root = ttk.Window(themename="darkly") #superhero
+    root = ttk.Window(themename="superhero") #superhero #darkly
     editor = HenryTextEditor(root)
     root.mainloop()
 

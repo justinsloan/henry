@@ -11,6 +11,7 @@ from pathlib import Path
 import threading
 
 from editor_functions import *
+from class_NotificationManager import *
 
 
 class HenryTextEditor:
@@ -46,7 +47,7 @@ class HenryTextEditor:
         self.root.bind_all('<Control-o>',       self._select_project)
         self.root.bind_all('<Control-n>',       self._new_project)
         self.root.bind_all('<Control-s>',       self._save_file)
-        self.root.bind_all('<Control-Shift-s>', self._save_file)
+        self.root.bind_all('<Control-Shift-s>', self._save_file_as)
         #self.root.bind_all('<Control-w>',       self._close_current_file)
         self.root.bind_all('<Control-q>',       self._on_close)
         self.root.bind_all('<Control-z>',       self._undo_action)
@@ -108,7 +109,7 @@ class HenryTextEditor:
         self.file_submenu.add_command(label="➕ New Post", command=self._new_file, accelerator="Ctrl+n")
         self.file_submenu.add_command(label="📄 Open...", command=self._open_file, accelerator="Ctrl+o")
         self.file_submenu.add_command(label="💾 Save", command=self._save_file, accelerator="Ctrl+s")
-        self.file_submenu.add_command(label="Save as...", command=self._save_file, accelerator="Ctrl+Shift+s")
+        self.file_submenu.add_command(label="Save as...", command=self._save_file_as, accelerator="Ctrl+Shift+s")
 
         ## Edit Submenu
         self.edit_submenu = ttk.Menu(self.main_menu, tearoff=0)
@@ -178,11 +179,18 @@ class HenryTextEditor:
         self.status_bar_right.pack(side=tk.RIGHT)
 
         # ---------- Overlay frame ----------
-        self.overlay = ttk.Frame(self.root, style='Overlay.TFrame')
-        self.overlay.place(relx=0.5, rely=0.5, anchor='center')  # center over text_area
-        self.overlay_label = ttk.Label(self.overlay, text="", padding=5)
-        self.overlay_label.pack()
-        self.overlay.lower()  # hide initially
+        # self.overlay = ttk.Frame(self.root, style='Overlay.TFrame')
+        # self.overlay.place(relx=0.98, rely=0.97, anchor='se')
+        # overlay_close_label = ttk.Label(self.overlay, text="❌", padding=5, background= 'red')
+        # overlay_close_label.pack(side=tk.RIGHT, anchor='w')
+        # overlay_close_label.bind("<Button-1>", lambda event=None: self.overlay.lower())
+        # self.overlay_label = ttk.Label(self.overlay, text="", padding=5)
+        # self.overlay_label.pack(side=tk.LEFT, anchor='w')
+        # self.overlay.lower()  # hide initially
+        # -----------------------------------
+
+        # ---------- Notification frame ----------
+        self.notify = NotificationManager(self.text_area)
         # -----------------------------------
 
         # ---------- Project Info Pane frame ----------
@@ -297,17 +305,16 @@ class HenryTextEditor:
         new_size = current_size - 1
         self.editor_font.config(size=new_size)
 
-    def _show_overlay(self, text="Hello World!"):
-        """Display the overlay with the provided text."""
-        self.overlay_label.config(text=text)
-        self.overlay.lift()  # bring to front
-        # hide after a short delay (optional)
-        self.root.after(6000, self.overlay.lower)
+    def _notify(self, text="Hello World!", delay="6000"):
+        """Show notification of the provided text for the specified time in ms."""
+        self.notify.show(message=text, duration=delay)
+        self.notify.show(message="forever test", duration=-1)
+        self.text_area.focus_force() # returns focus to the main text area
 
     def _show_info_pane(self):
         """Display the overlay with the current file name."""
         if not self.is_project_open:
-            self._show_overlay("No project is open.")
+            self._notify("No project is open.")
             return
 
         # Pre‑populate entry with the window title
@@ -370,7 +377,7 @@ categories: blog
             self.current_file_path = file_path
             self._update_word_count()
             self.modified = False
-            self._show_overlay(f"✅ Opened {os.path.basename(file_path)}")
+            self._notify(f"✅ Opened {os.path.basename(file_path)}")
             self._update_statusline(f"✅ Opened {os.path.basename(file_path)}")
 
     def _save_file_as(self, event=None):
@@ -382,9 +389,9 @@ categories: blog
                                                             ("HTML", "*.htm *.html"),
                                                             ("All Files", "*.*")])
         if not file_path:
-            self._show_overlay("🚫 Cancelled save file.")
+            self._notify("🚫 Cancelled save file.")
         else:
-            self._save_file(file_path)
+            self._save_file(file_path=file_path)
 
     def _save_file(self, event=None, file_path=""):
         """
@@ -395,11 +402,13 @@ categories: blog
 
         if not file_path:
             if not self.current_file_path:
-                self._show_overlay("🚫 No file path provided.")
+                self._save_file_as()
+                return
             else:
                 file_path = self.current_file_path
 
         if not file_path: # double check we have a file path before we save
+            self._notify("🚫 Error saving file.\nNo file path provided.")
             return
         else:
             try:
@@ -411,10 +420,10 @@ categories: blog
                 self.root.title(f"Henry - {file_path}")
                 self.current_file_path = file_path
                 self.modified = False
-                self._show_overlay(f"✅ Saved {os.path.basename(file_path)}")
+                self._notify(f"✅ Saved {os.path.basename(file_path)}")
             except Exception as e:
                 print(e)
-                self._show_overlay("Could not save file.")
+                self._notify("Could not save file.")
 
     def _on_close(self, event=None):
         """Exit the editor."""
@@ -448,9 +457,9 @@ categories: blog
         code, out, err = new_jekyll_site(self.jekyll_path, site_name, folder)
 
         if code == 0:
-            self._show_overlay(f"✅ {site_name} created.")
+            self._notify(f"✅ {site_name} created.")
         else:
-            self._show_overlay("ERROR!!! Creating project.")
+            self._notify("ERROR!!! Creating project.")
 
         self._open_project(f"{folder}/{site_name}")
 
@@ -486,7 +495,7 @@ categories: blog
         self._populate_project_menu()
 
         self.is_project_open = True
-        self._show_overlay(f"✅ Opened {self.config['title']}")
+        self._notify(f"✅ Opened {self.config['title']}")
 
     def _populate_project_menu(self):
         if not self.project_path:
@@ -557,9 +566,9 @@ categories: blog
 
     def _build_finished(self, code, err):
         if code == 0:
-            self._show_overlay("✅ Site build completed successfully.")
+            self._notify("✅ Site build completed successfully.")
         else:
-            self._show_overlay(f"🚫 Build failed.\n{err}")
+            self._notify("🚫 Build failed.\n{err}")
 
         self._show_statusline_spinner = False
         self._update_statusline(self.project_path)
