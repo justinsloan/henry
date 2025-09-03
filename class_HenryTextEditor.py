@@ -28,7 +28,12 @@ class HenryTextEditor:
 
         self.modified = False        # is the text area modified?
         self.is_project_open = False # is a project open?
+        self.verbose = True          # set verbose mode for troubleshooting
         self._show_statusline_spinner = False
+
+        # Get Bootstrap Themes
+        style = ttk.Style()
+        self.available_themes = style.theme_names()
 
         # Application icons
         ICONS = Path(__file__).parent / 'icons'
@@ -76,7 +81,7 @@ class HenryTextEditor:
         self.button_bar.pack(side=tk.TOP, fill=tk.X)
 
         # --------------- Open Menu ---------------
-        self.project_menubutton = ttk.Menubutton(self.button_bar, text="🗃️ Project", bootstyle="light-outline")
+        self.project_menubutton = ttk.Menubutton(self.button_bar, text="🗃️ Project")#, bootstyle="light-outline")
         self.project_menubutton.pack(side=tk.LEFT)
 
         self.project_menu = ttk.Menu(self.project_menubutton, tearoff=0)
@@ -103,9 +108,6 @@ class HenryTextEditor:
         ## File Submenu
         self.file_submenu = ttk.Menu(self.main_menu, tearoff=0)
         self.main_menu.add_cascade(label="File", menu=self.file_submenu)
-        #self.file_submenu.add_command(label="New Project...", command=self._new_file, state="disabled")
-        #self.file_submenu.add_command(label="📂 Open Project...", command=self._new_file, state="disabled")
-        #self.file_submenu.add_separator()
         self.file_submenu.add_command(label="➕ New Post", command=self._new_file, accelerator="Ctrl+n")
         self.file_submenu.add_command(label="📄 Open...", command=self._open_file, accelerator="Ctrl+o")
         self.file_submenu.add_command(label="💾 Save", command=self._save_file, accelerator="Ctrl+s")
@@ -126,10 +128,10 @@ class HenryTextEditor:
         ## Insert Submenu
         self.insert_submenu = ttk.Menu(self.main_menu, tearoff=0)
         self.main_menu.add_cascade(label="Insert", menu=self.insert_submenu)
-        self.insert_submenu.add_command(label="Date/Time", command=self._new_file, state="disabled", accelerator="Ctrl+Shift+O")
-        self.insert_submenu.add_command(label="Image...", command=self._new_file, state="disabled")
-        self.insert_submenu.add_command(label="Table...", command=self._new_file, state="disabled")
-        self.insert_submenu.add_command(label="Link", command=self._new_file, state="disabled", accelerator="Ctrl+Shift+l")
+        self.insert_submenu.add_command(label="  Date/Time", command=self._new_file, state="disabled", accelerator="Ctrl+Shift+O")
+        self.insert_submenu.add_command(label="  Image...", command=self._new_file, state="disabled")
+        self.insert_submenu.add_command(label="  Table...", command=self._new_file, state="disabled")
+        self.insert_submenu.add_command(label="  Link", command=self._new_file, state="disabled", accelerator="Ctrl+Shift+l")
 
         ## Help Submenu
         self.help_submenu = ttk.Menu(self.main_menu, tearoff=0)
@@ -143,6 +145,13 @@ class HenryTextEditor:
         self.help_submenu.add_command(label="About...", command=self._show_about_dialog)
 
         ## Settings
+        self.main_menu.add_separator()
+        self.theme_submenu = ttk.Menu(self.main_menu, tearoff=0)
+        self.main_menu.add_cascade(label="Theme", menu=self.theme_submenu)
+        for theme in self.available_themes:
+            title = theme.title()
+            self.theme_submenu.add_command(label=title, command=lambda t=title.lower(): self._set_theme(t))
+
         self.main_menu.add_separator()
         self.main_menu.add_command(label="⚙️ Settings...", command=self._show_about_dialog, state="disabled", accelerator="Ctrl+Alt+s")
         self.main_menu.add_command(label="🪪 Project Properties", command=self._show_info_pane, accelerator="Ctrl+Alt+p")
@@ -161,6 +170,7 @@ class HenryTextEditor:
         self.text_area.pack(fill=tk.BOTH, expand=1)
         self.text_area.bind("<Button-3>", self._show_edit_context) # bind mouse right-click
         self.root.bind("<Button-1>", self._hide_context) # hide context menu when clicking elsewhere
+        self.text_area.bind("<Configure>", lambda e: self.notify.restack())
 
         # Create a Scrollbar and attach it to the Text widget
         self.scrollbar = ttk.Scrollbar(self.text_area)
@@ -177,17 +187,6 @@ class HenryTextEditor:
 
         self.status_bar_right = ttk.Label(self.status_bar, text="Words: 0 ")
         self.status_bar_right.pack(side=tk.RIGHT)
-
-        # ---------- Overlay frame ----------
-        # self.overlay = ttk.Frame(self.root, style='Overlay.TFrame')
-        # self.overlay.place(relx=0.98, rely=0.97, anchor='se')
-        # overlay_close_label = ttk.Label(self.overlay, text="❌", padding=5, background= 'red')
-        # overlay_close_label.pack(side=tk.RIGHT, anchor='w')
-        # overlay_close_label.bind("<Button-1>", lambda event=None: self.overlay.lower())
-        # self.overlay_label = ttk.Label(self.overlay, text="", padding=5)
-        # self.overlay_label.pack(side=tk.LEFT, anchor='w')
-        # self.overlay.lower()  # hide initially
-        # -----------------------------------
 
         # ---------- Notification frame ----------
         self.notify = NotificationManager(self.text_area)
@@ -209,7 +208,7 @@ class HenryTextEditor:
         _yaml_config_entry_widgets = []
         for widget in widget_specs:
             row = ttk.Frame(self.info_pane)
-            row.pack(side=tk.TOP, padx=5, pady=3, fill=tk.X)
+            row.pack(side=tk.TOP, anchor='n', padx=5, pady=3, fill=tk.X)
 
             label = ttk.Label(row, text=widget["label"])
             label.pack(side=tk.LEFT, padx=5, pady=(2, 0))
@@ -249,6 +248,9 @@ class HenryTextEditor:
 
         # Get system/service paths
         self.system_path, self.ruby_path, self.jekyll_path = get_app_paths()
+        self._verbose("System Path: " + self.system_path)
+        self._verbose("Ruby Path: " + self.ruby_path)
+        self._verbose("Jekyll Path: " + self.jekyll_path)
 
         # Verify Jekyll install
         if not self.jekyll_path:
@@ -272,6 +274,20 @@ class HenryTextEditor:
         # Handle closing/exiting
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
+    def _set_theme(self, theme="darkly"):
+        self._verbose("Theme: " + theme)
+        self.root.style.theme_use(theme.lower())
+        # force a redraw of all widgets
+        for w in self.root.winfo_children():
+            w.update_idletasks()
+
+    def _verbose(self, message):
+        """Show a notification for 60 seconds"""
+        if self.verbose:
+            time_now = datetime.today().strftime('%H:%M:%S')
+            message = "🛎️ " + time_now + " " + message
+            self.notify.show(message, 60000)
+
     def _close_info_pane(self):
         """Save project config and hide the info pane."""
         self.info_pane.lower()  # hide the pane
@@ -292,6 +308,7 @@ class HenryTextEditor:
 
     def _hide_context(self, event=None):
         self.edit_submenu.unpost()
+        self.info_pane.lower()
 
     def _increase_font_size(self, event=None):
         """Increment the editor font size by 1 point."""

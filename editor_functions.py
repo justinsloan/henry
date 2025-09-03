@@ -110,7 +110,7 @@ def build_jekyll_site(jekyll_path="jekyll", site_dir="my_jekyll_site", destinati
 
 
 def get_app_paths():
-    """Check PATH to find Ruby and Jekyll install."""
+    """Check PATH to find Ruby and Jekyll install location."""
     # check if .gem path exists; the Ruby binary is located here on Mac systems
     gem_path = ""
     gem_user_path = Path(os.path.expanduser('~') + "/.gem/ruby")
@@ -130,14 +130,6 @@ def get_app_paths():
     search_path = user_path + gem_path + ":" + system_path
     jekyll_path = shutil.which('jekyll', path=search_path)
     ruby_path = shutil.which('ruby', path=search_path)
-
-    print("System :::" + str(system_path))
-    print("User   :::" + str(user_path))
-    print("Search :::" + str(search_path))
-    print("")
-    print("FOUND")
-    print("Ruby   :::" + str(ruby_path))
-    print("Jekyll :::" + str(jekyll_path))
 
     return search_path, ruby_path, jekyll_path
 

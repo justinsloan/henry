@@ -15,7 +15,7 @@ class NotificationManager:
         self.entry_widget = entry_widget
         self.notifications = []  # list of active frames
 
-    def show(self, message, duration="6000"):
+    def show(self, message, duration=6000):
         """Create a notification that auto‑closes after duration ms."""
         # Create container
         frame = ttk.Frame(self.entry_widget, style="Notif.TFrame")
@@ -48,11 +48,12 @@ class NotificationManager:
             frame.destroy()
             self.notifications.remove(frame)
             # Re‑stack remaining notifications
-            self._reposition()
+            self.restack()
 
-    def _reposition(self):
-        y = self.entry_widget.winfo_height() - 10
-        for n in reversed(self.notifications):
-            y -= n.winfo_reqheight() + 5
-            n.place_configure(y=y)
+    def restack(self):
+        y = self.entry_widget.winfo_height() - 15
+        for note in reversed(self.notifications):
+            x = self.entry_widget.winfo_width() - note.winfo_reqwidth() - 30
+            y -= note.winfo_reqheight() + 5
+            note.place_configure(x=x, y=y)
 
