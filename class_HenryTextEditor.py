@@ -305,10 +305,9 @@ class HenryTextEditor:
         new_size = current_size - 1
         self.editor_font.config(size=new_size)
 
-    def _notify(self, text="Hello World!", delay="6000"):
+    def _notify(self, text="Hello World!", delay=6000):
         """Show notification of the provided text for the specified time in ms."""
         self.notify.show(message=text, duration=delay)
-        self.notify.show(message="forever test", duration=-1)
         self.text_area.focus_force() # returns focus to the main text area
 
     def _show_info_pane(self):
