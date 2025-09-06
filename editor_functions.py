@@ -131,6 +131,9 @@ def get_app_paths():
     jekyll_path = shutil.which('jekyll', path=search_path)
     ruby_path = shutil.which('ruby', path=search_path)
 
+    if not jekyll_path: jekyll_path = ""
+    if not ruby_path: ruby_path = ""
+
     return search_path, ruby_path, jekyll_path
 
 
